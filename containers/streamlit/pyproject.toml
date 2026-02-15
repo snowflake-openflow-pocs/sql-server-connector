@@ -1,0 +1,16 @@
+[project]
+name = "cdc-dashboard"
+version = "1.0.0"
+description = "Streamlit dashboard for SQL Server CDC demo"
+requires-python = ">=3.11"
+dependencies = [
+    "streamlit>=1.28.0",
+    "pyodbc>=5.0.0",
+    "pandas>=2.0.0",
+    "plotly>=5.17.0",
+    "python-dotenv>=1.0.0",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

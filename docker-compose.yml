@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    build: ./containers/sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrongPassw0rd!
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - cdc_net
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrongPassw0rd! -Q 'SELECT 1'"]
+      interval: 10s
+      retries: 10
+      start_period: 30s
+
+  datagen:
+    build: ./containers/datagen
+    environment:
+      - SQL_HOST=sqlserver
+      - SQL_PORT=1433
+      - SQL_USER=sa
+      - SQL_PASSWORD=YourStrongPassw0rd!
+      - SQL_DATABASE=DemoDB
+      - DATA_MODE=steady
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - cdc_net
+    restart: unless-stopped
+
+  streamlit:
+    build: ./containers/streamlit
+    environment:
+      - SQL_HOST=sqlserver
+      - SQL_PORT=1433
+      - SQL_USER=sa
+      - SQL_PASSWORD=YourStrongPassw0rd!
+      - SQL_DATABASE=DemoDB
+    ports:
+      - "8501:8501"
+    depends_on:
+      - sqlserver
+    networks:
+      - cdc_net
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
+
+networks:
+  cdc_net:
+    driver: bridge

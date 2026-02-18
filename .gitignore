@@ -32,6 +32,10 @@ wheels/
 # Logs
 *.log
 
+# Downloaded connector configs (may contain usernames)
+configs/
+!configs/.gitkeep
+
 # OS
 .DS_Store
 Thumbs.db

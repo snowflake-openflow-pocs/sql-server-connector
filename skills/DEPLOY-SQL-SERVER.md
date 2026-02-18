@@ -103,12 +103,11 @@ You should see `sqlserver:latest` in the list.
 
 ---
 
-## Step 4: Build the Other Images
+## Step 4: Build the Streamlit Image
 
-**What this does:** Builds the data generator and Streamlit dashboard images.
+**What this does:** Builds the Streamlit dashboard image (which includes the built-in data generator).
 
 ```bash
-make build-datagen
 make build-streamlit
 ```
 
@@ -120,10 +119,10 @@ make build
 
 **Verify:**
 ```bash
-docker images | grep -E "sqlserver|datagen|streamlit"
+docker images | grep -E "sqlserver|streamlit"
 ```
 
-All 3 images should appear.
+Both images should appear.
 
 ---
 
@@ -138,7 +137,6 @@ make push
 **You should see:**
 ```
 📤 Pushing SQL Server image...
-📤 Pushing Data Generator image...
 📤 Pushing Streamlit Dashboard image...
 ✅ All images pushed to Snowflake registry.
 ```
@@ -150,7 +148,7 @@ First push takes a few minutes per image. Subsequent pushes are faster (Docker l
 snow spcs image-repository list-images CDC_DEMO.PUBLIC.IMAGES -c $SNOW_CONN
 ```
 
-You should see all 3 images listed.
+You should see both images listed.
 
 **If something fails:**
 - `REGISTRY_NOT_SET` → The image repository wasn't found. Re-run `make setup`
@@ -160,7 +158,7 @@ You should see all 3 images listed.
 
 ## Step 6: Test Locally First (Optional but Recommended)
 
-**What this does:** Runs all 3 containers on your machine with Docker Compose before deploying to SPCS. Great for catching issues early.
+**What this does:** Runs both containers on your machine with Docker Compose before deploying to SPCS. Great for catching issues early.
 
 ```bash
 make local-up
@@ -194,7 +192,7 @@ make local-down
 
 ## Step 7: Deploy to SPCS
 
-**What this does:** Creates the multi-container service on Snowpark Container Services. All 3 containers (SQL Server, data generator, Streamlit) run in a single service and communicate via localhost.
+**What this does:** Creates the multi-container service on Snowpark Container Services. Both containers (SQL Server, Streamlit) run in a single service and communicate via localhost.
 
 ```bash
 make deploy
@@ -217,7 +215,6 @@ Look for `status: READY` on the service instances. If it shows `PENDING`, wait a
 **Check container logs if something seems stuck:**
 ```bash
 make logs CONTAINER=sqlserver
-make logs CONTAINER=datagen
 make logs CONTAINER=streamlit
 ```
 
@@ -277,7 +274,7 @@ This drops the service, compute pool, secrets, image repository, warehouse, and 
 | Check service health | `make status` |
 | Get dashboard URL | `make endpoint` |
 | View SQL Server logs | `make logs CONTAINER=sqlserver` |
-| View datagen logs | `make logs CONTAINER=datagen` |
+| View Streamlit logs | `make logs CONTAINER=streamlit` |
 | Test locally first | `make local-up` |
 | Stop local test | `make local-down` |
 | Nuke everything | `make clean` |

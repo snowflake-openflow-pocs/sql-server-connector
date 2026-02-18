@@ -35,7 +35,6 @@ REGISTRY_URL     ?= $(shell snow sql -c $(SNOW_CONN) -q "DESCRIBE IMAGE REPOSITO
 
 # Image names
 SQLSERVER_IMAGE  ?= $(REGISTRY_URL)/sqlserver:latest
-DATAGEN_IMAGE    ?= $(REGISTRY_URL)/datagen:latest
 STREAMLIT_IMAGE  ?= $(REGISTRY_URL)/streamlit:latest
 
 # Platform — SPCS requires linux/amd64
@@ -103,10 +102,10 @@ login:
 # -----------------------------------------------------------------------------
 # Build Container Images
 # -----------------------------------------------------------------------------
-# Builds all 3 images for linux/amd64 (required by SPCS).
+# Builds all images for linux/amd64 (required by SPCS).
 # On Apple Silicon, this cross-compiles via Docker buildx.
 
-build: build-sqlserver build-datagen build-streamlit
+build: build-sqlserver build-streamlit
 	@echo "✅ All images built."
 
 build-sqlserver:
@@ -115,13 +114,6 @@ build-sqlserver:
 		-t sqlserver:latest \
 		-f containers/sqlserver/Dockerfile \
 		containers/sqlserver/
-
-build-datagen:
-	@echo "🔨 Building Data Generator image..."
-	docker build --platform $(PLATFORM) \
-		-t datagen:latest \
-		-f containers/datagen/Dockerfile \
-		containers/datagen/
 
 build-streamlit:
 	@echo "🔨 Building Streamlit Dashboard image..."
@@ -135,18 +127,13 @@ build-streamlit:
 # -----------------------------------------------------------------------------
 # Tags local images with the Snowflake registry URL and pushes them.
 
-push: push-sqlserver push-datagen push-streamlit
+push: push-sqlserver push-streamlit
 	@echo "✅ All images pushed to Snowflake registry."
 
 push-sqlserver:
 	@echo "📤 Pushing SQL Server image..."
 	docker tag sqlserver:latest $(SQLSERVER_IMAGE)
 	docker push $(SQLSERVER_IMAGE)
-
-push-datagen:
-	@echo "📤 Pushing Data Generator image..."
-	docker tag datagen:latest $(DATAGEN_IMAGE)
-	docker push $(DATAGEN_IMAGE)
 
 push-streamlit:
 	@echo "📤 Pushing Streamlit Dashboard image..."
@@ -157,7 +144,7 @@ push-streamlit:
 # Deploy SPCS Service
 # -----------------------------------------------------------------------------
 # Creates the multi-container service on SPCS.
-# All 3 containers run in a single service, communicating via localhost.
+# Both containers run in a single service, communicating via localhost.
 
 deploy:
 	@echo "🚀 Deploying service to SPCS..."
@@ -189,26 +176,6 @@ deploy:
 			      volumeMounts: \
 			        - name: sql-data \
 			          mountPath: /var/opt/mssql \
-			    - name: datagen \
-			      image: /$(IMAGE_REPO)/datagen:latest \
-			      env: \
-			        SQL_HOST: localhost \
-			        SQL_PORT: \"1433\" \
-			        SQL_USER: sa \
-			        SQL_DATABASE: DemoDB \
-			        DATA_MODE: steady \
-			      secrets: \
-			        - snowflakeSecret: \
-			            objectName: $(DATABASE).$(SCHEMA).SQL_SA_PASSWORD \
-			            secretKeyRef: password \
-			            envVarName: SQL_PASSWORD \
-			      resources: \
-			        requests: \
-			          memory: 512Mi \
-			          cpu: \"0.5\" \
-			        limits: \
-			          memory: 1Gi \
-			          cpu: \"1\" \
 			    - name: streamlit \
 			      image: /$(IMAGE_REPO)/streamlit:latest \
 			      env: \
@@ -267,7 +234,7 @@ verify:
 status: verify
 
 # View logs for a specific container (default: sqlserver)
-# Usage: make logs CONTAINER=datagen
+# Usage: make logs CONTAINER=streamlit
 CONTAINER ?= sqlserver
 logs:
 	@echo "📋 Logs for container '$(CONTAINER)'..."
@@ -361,7 +328,7 @@ help:
 	@echo "    make deploy         Create SPCS service"
 	@echo "    make verify         Check service status"
 	@echo "    make endpoint       Get dashboard URL"
-	@echo "    make logs           View container logs (CONTAINER=sqlserver|datagen|streamlit)"
+	@echo "    make logs           View container logs (CONTAINER=sqlserver|streamlit)"
 	@echo "    make clean          Drop all Snowflake objects"
 	@echo ""
 	@echo "  Local Development:"

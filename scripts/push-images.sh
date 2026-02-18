@@ -41,7 +41,7 @@ echo ""
 # Build Images
 # ============================================================================
 
-echo -e "${YELLOW}[1/3] Building SQL Server image...${NC}"
+echo -e "${YELLOW}[1/2] Building SQL Server image...${NC}"
 docker build \
     -t "${REGISTRY_URL}/sqlserver:latest" \
     -f containers/sqlserver/Dockerfile \
@@ -50,16 +50,7 @@ docker build \
 echo -e "${GREEN}✓ SQL Server image built${NC}"
 echo ""
 
-echo -e "${YELLOW}[2/3] Building Data Generator image...${NC}"
-docker build \
-    -t "${REGISTRY_URL}/datagen:latest" \
-    -f containers/datagen/Dockerfile \
-    containers/datagen/
-
-echo -e "${GREEN}✓ Data Generator image built${NC}"
-echo ""
-
-echo -e "${YELLOW}[3/3] Building Streamlit image...${NC}"
+echo -e "${YELLOW}[2/2] Building Streamlit image...${NC}"
 docker build \
     -t "${REGISTRY_URL}/streamlit:latest" \
     -f containers/streamlit/Dockerfile \
@@ -77,17 +68,12 @@ echo -e "${YELLOW}Pushing images to Snowflake registry...${NC}"
 echo -e "${YELLOW}========================================${NC}"
 echo ""
 
-echo -e "${YELLOW}[1/3] Pushing SQL Server image...${NC}"
+echo -e "${YELLOW}[1/2] Pushing SQL Server image...${NC}"
 docker push "${REGISTRY_URL}/sqlserver:latest"
 echo -e "${GREEN}✓ SQL Server image pushed${NC}"
 echo ""
 
-echo -e "${YELLOW}[2/3] Pushing Data Generator image...${NC}"
-docker push "${REGISTRY_URL}/datagen:latest"
-echo -e "${GREEN}✓ Data Generator image pushed${NC}"
-echo ""
-
-echo -e "${YELLOW}[3/3] Pushing Streamlit image...${NC}"
+echo -e "${YELLOW}[2/2] Pushing Streamlit image...${NC}"
 docker push "${REGISTRY_URL}/streamlit:latest"
 echo -e "${GREEN}✓ Streamlit image pushed${NC}"
 echo ""

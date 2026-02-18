@@ -31,30 +31,6 @@ CREATE SERVICE IF NOT EXISTS POC_CDC.PUBLIC.CDC_DEMO_SERVICE
         }
       },
       {
-        "name": "datagen",
-        "image": "/POC_CDC/PUBLIC/IMAGES/datagen:latest",
-        "env": {
-          "SQL_HOST": "localhost",
-          "SQL_PORT": "1433",
-          "SQL_USER": "sa",
-          "SQL_PASSWORD": {
-            "secretRef": "SQL_SA_PASSWORD"
-          },
-          "SQL_DATABASE": "DemoDB",
-          "DATA_MODE": "steady"
-        },
-        "resources": {
-          "requests": {
-            "cpu": "0.5",
-            "memory": "512Mi"
-          },
-          "limits": {
-            "cpu": "1",
-            "memory": "1Gi"
-          }
-        }
-      },
-      {
         "name": "streamlit",
         "image": "/POC_CDC/PUBLIC/IMAGES/streamlit:latest",
         "env": {

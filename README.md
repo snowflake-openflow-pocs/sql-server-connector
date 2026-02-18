@@ -1,6 +1,6 @@
 # SQL Server Openflow POC
 
-A self-contained SQL Server CDC demo environment running inside Snowflake SPCS. Deploy a SQL Server 2022 instance with Change Tracking enabled, a data generator, and a Streamlit dashboard to test the Openflow SQL Server connector.
+A self-contained SQL Server CDC demo environment running inside Snowflake SPCS. Deploy a SQL Server 2022 instance with Change Tracking enabled and a Streamlit dashboard (with built-in data generator) to test the Openflow SQL Server connector.
 
 ## Quick Start
 
@@ -64,8 +64,7 @@ docker-compose up --build
 ## Architecture
 
 - **SQL Server**: Containerized SQL Server 2022 with DemoDB (Customers, Products, Orders) and Change Tracking enabled
-- **Data Generator**: Python script using Faker to simulate INSERT/UPDATE/DELETE operations
-- **Streamlit Dashboard**: Multi-page app for setup verification, simulator control, monitoring, and demo walkthrough
+- **Streamlit Dashboard**: Multi-page app for setup verification, data generation (Faker-based simulator), and demo walkthrough
 
 See [architecture.md](architecture.md) and [DEPLOYMENT-PLAN.md](DEPLOYMENT-PLAN.md) for details.
 

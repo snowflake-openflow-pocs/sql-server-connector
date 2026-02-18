@@ -21,19 +21,19 @@ A fully self-contained SPCS-based SQL Server CDC demo environment that any Snowf
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  Compute Pool: CDC_DEMO_POOL (CPU_X64_S: 3 vCPU, 13 GB)      │   │
 │  │                                                              │   │
-│  │  Service: CDC_DEMO_SERVICE (single service, 3 containers)    │   │
-│  │  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐    │   │
-│  │  │  SQL Server    │ │  Data Generator│ │  Streamlit     │    │   │
-│  │  │  2022 (linux/  │ │  (Python/faker)│ │  Dashboard     │    │
-│  │  │  amd64)        │ │                │ │                │    │
-│  │  │  Port 1433     │ │  Connects via  │ │  Port 8501     │    │
-│  │  │  DemoDB        │ │  localhost:1433│ │  (public HTTP) │    │
-│  │  │  - Customers   │ │                │ │  Pages:        │    │
-│  │  │  - Products    │ │  Modes:        │ │  · Setup       │    │
-│  │  │  - Orders      │ │  · Steady      │ │  · Simulator   │    │
-│  │  │  Change Tracking│ │  · Burst      │ │  · Monitor     │    │
-│  │  │  enabled       │ │  · Mixed       │ │  · Demo Script │    │
-│  │  └───────┬────────┘ └────────────────┘ └────────────────┘    │   │
+│  │  Service: CDC_DEMO_SERVICE (single service, 2 containers)    │   │
+│  │  ┌────────────────┐ ┌──────────────────────┐                 │   │
+│  │  │  SQL Server    │ │  Streamlit Dashboard  │                 │   │
+│  │  │  2022 (linux/  │ │  + Data Generator     │                 │   │
+│  │  │  amd64)        │ │  (Python/Faker)       │                 │   │
+│  │  │  Port 1433     │ │  Port 8501            │                 │   │
+│  │  │  DemoDB        │ │  (public HTTP)        │                 │   │
+│  │  │  - Customers   │ │  Pages:               │                 │   │
+│  │  │  - Products    │ │  · Setup              │                 │   │
+│  │  │  - Orders      │ │  · Simulator (gen)    │                 │   │
+│  │  │  Change Tracking│ │  · Demo Script       │                 │   │
+│  │  │  enabled       │ │                       │                 │   │
+│  │  └───────┬────────┘ └──────────────────────┘                 │   │
 │  │          │ Block Storage (10 GB)                             │   │
 │  │          │ /var/opt/mssql                                    │   │
 │  └──────────┼───────────────────────────────────────────────────┘   │
@@ -92,9 +92,8 @@ If 13 GB feels tight, step up to `CPU_X64_M` (6 vCPU, 28 GB) for comfort.
 | Container | CPU Request | CPU Limit | Memory Request | Memory Limit |
 |-----------|------------|-----------|----------------|--------------|
 | **SQL Server 2022** | 1 | 2 | 2 Gi | 4 Gi |
-| **Data Generator** | 0.5 | 1 | 512 Mi | 1 Gi |
-| **Streamlit** | 0.5 | 1 | 512 Mi | 1 Gi |
-| **Total** | 2 | 4 | ~3 Gi | ~6 Gi |
+| **Streamlit + Data Generator** | 0.5 | 1 | 512 Mi | 1 Gi |
+| **Total** | 1.5 | 3 | ~2.5 Gi | ~5 Gi |
 
 ### Storage
 
@@ -118,18 +117,17 @@ If 13 GB feels tight, step up to `CPU_X64_M` (6 vCPU, 28 GB) for comfort.
 
 ### Phase 1: Docker Images (Day 1) — ~5 hours
 
-**Objective:** All 3 container images built, tested locally, pushed to Snowflake registry.
+**Objective:** Both container images built, tested locally, pushed to Snowflake registry.
 
 | Task | Time | Deliverable |
 |------|------|-------------|
 | **1.1** Create image repository in Snowflake | 15m | `CREATE IMAGE REPOSITORY poc_images` |
 | **1.2** SQL Server Dockerfile (2022 + init.sql for DemoDB + Change Tracking) | 1.5h | Dockerfile + init.sql with Customers/Products/Orders + CT enabled |
-| **1.3** Data Generator Dockerfile (Python + pyodbc + faker + ODBC driver) | 1.5h | Dockerfile + generator.py with steady/burst/mixed modes |
-| **1.4** Streamlit Dockerfile (Python + streamlit + pyodbc + ODBC driver) | 1h | Dockerfile + multipage app scaffold |
-| **1.5** Test locally with docker-compose | 30m | All 3 containers run, data flows, dashboard loads |
-| **1.6** Push all images to Snowflake registry | 30m | `docker push` × 3 |
+| **1.3** Streamlit Dockerfile (Python + streamlit + pyodbc + faker + ODBC driver) | 1.5h | Dockerfile + multipage app with built-in data generator |
+| **1.4** Test locally with docker-compose | 30m | Both containers run, data flows, dashboard loads |
+| **1.5** Push all images to Snowflake registry | 30m | `docker push` × 2 |
 
-**Exit Criteria:** All 3 images in Snowflake registry, verified locally.
+**Exit Criteria:** Both images in Snowflake registry, verified locally.
 
 ### Phase 2: SPCS Deployment + Streamlit (Day 2) — ~6 hours
 
@@ -138,7 +136,7 @@ If 13 GB feels tight, step up to `CPU_X64_M` (6 vCPU, 28 GB) for comfort.
 | Task | Time | Deliverable |
 |------|------|-------------|
 | **2.1** Create compute pool + secrets + service spec | 1h | SQL commands + `service_spec.yaml` |
-| **2.2** Deploy service to SPCS | 30m | `CREATE SERVICE` + verify all containers running |
+| **2.2** Deploy service to SPCS | 30m | `CREATE SERVICE` + verify both containers running |
 | **2.3** Validate SQL Server + Change Tracking via logs | 30m | `SYSTEM$GET_SERVICE_LOGS` shows DemoDB ready |
 | **2.4** Streamlit Setup page (DB health, table status, CT verification) | 1h | Connection info card, table list with PK/CT status |
 | **2.5** Streamlit Simulator page (mode selector, rate control, start/stop) | 1h | Control data generator via shared state/API |
@@ -193,7 +191,7 @@ If 13 GB feels tight, step up to `CPU_X64_M` (6 vCPU, 28 GB) for comfort.
 |---|----------|--------|-----------|
 | 1 | **Container image** | SQL Server 2022 | Confirmed linux/amd64; Azure SQL Edge amd64 uncertain |
 | 2 | **Compute pool** | CPU_X64_S (3 vCPU, 13 GB) | Minimum viable; upgrade to CPU_X64_M if needed |
-| 3 | **Architecture** | Single service, 3 containers | Share localhost networking, simplest deployment |
+| 3 | **Architecture** | Single service, 2 containers | Share localhost networking, simplest deployment |
 | 4 | **Dashboard** | Streamlit | All Python, Snowflake product, no build step |
 | 5 | **Networking** | SPCS internal DNS | Zero EAI, zero config, Openflow connects directly |
 | 6 | **Object ID Resolution** | CASE_INSENSITIVE | Snowflake-native uppercase, no quoting headaches |
@@ -222,8 +220,8 @@ If 13 GB feels tight, step up to `CPU_X64_M` (6 vCPU, 28 GB) for comfort.
 
 ### Must Have ✅
 
-- [ ] All 3 images pushed to Snowflake registry
-- [ ] `CREATE COMPUTE POOL` + `CREATE SERVICE` brings up all containers
+- [ ] Both images pushed to Snowflake registry (sqlserver, streamlit)
+- [ ] `CREATE COMPUTE POOL` + `CREATE SERVICE` brings up both containers
 - [ ] SQL Server healthy with DemoDB + Change Tracking enabled
 - [ ] Data generator producing INSERTs/UPDATEs/DELETEs
 - [ ] Streamlit dashboard accessible at public endpoint (4 pages)
@@ -297,19 +295,17 @@ sql-server-openflow-poc/
 │   ├── sqlserver/
 │   │   ├── Dockerfile
 │   │   └── init.sql             # DemoDB + Change Tracking + tables
-│   ├── datagen/
-│   │   ├── Dockerfile
-│   │   ├── requirements.txt
-│   │   └── generator.py         # Faker-based data generator
 │   └── streamlit/
 │       ├── Dockerfile
-│       ├── requirements.txt
-│       ├── app.py               # Main Streamlit app
+│       ├── pyproject.toml
+│       ├── Home.py              # Main Streamlit app
+│       ├── db.py                # Database connection utility
+│       ├── components.py        # Reusable UI components
+│       ├── theme.py             # Snowflake dark theme
 │       ├── pages/
 │       │   ├── 1_Setup.py
-│       │   ├── 2_Simulator.py
-│       │   ├── 3_Monitor.py
-│       │   └── 4_Demo_Script.py
+│       │   ├── 2_Simulator.py   # Built-in data generator (Faker)
+│       │   └── 3_Demo_Script.py
 │       └── .streamlit/
 │           └── config.toml      # Snowflake theme
 ├── scripts/

@@ -3,16 +3,23 @@ Page 4: Demo Script
 Step-by-step walkthrough for Snowflake Sales Engineers
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 import streamlit as st
 import pyodbc
 from typing import Optional
+from db import get_db_connection
+from components import page_setup, page_header, code_block, footer
+
+page_setup("Demo Script")
 
 
 def show(conn: Optional[pyodbc.Connection]):
     """Render the Demo Script page"""
-    
-    st.header("🎬 Demo Script")
-    st.markdown("Step-by-step walkthrough for deploying Openflow and demonstrating CDC")
+
+    page_header("Demo Script", "Step-by-step walkthrough for deploying Openflow and demonstrating CDC")
     
     st.info(
         "📌 **Target Audience:** Snowflake Sales Engineers (SEs) and customers\n\n"
@@ -103,12 +110,19 @@ def show(conn: Optional[pyodbc.Connection]):
     # Phase 4: Deploy Openflow Connector
     # =====================================================================
     with st.expander("**Phase 4️⃣: Deploy Openflow SQL Server CDC Connector** (5-10 min)"):
+        st.info(
+            "**Config files available!** Download per-database connector configs "
+            "from the **Setup** page (Section 4). These contain the correct "
+            "Openflow parameter names pre-populated from your SQL Server metadata."
+        )
+
         st.markdown("""
         #### Prerequisites:
         - Openflow deployed in your Snowflake SPCS
         - User role with Openflow admin permissions
         - nipyapi CLI available (or UI access)
-        
+        - Config files downloaded from Setup page → `configs/` directory
+
         #### Option A: Via UI (Openflow Web Interface)
         1. Navigate to **Openflow** in your Snowflake account
         2. Click **"Create New Flow"** or **"Import Flow"**
@@ -116,80 +130,67 @@ def show(conn: Optional[pyodbc.Connection]):
         4. **Configure source parameters:**
            - **JDBC URL:** `jdbc:sqlserver://cdc-demo-service.<hash>.svc.spcs.internal:1433;databaseName=DemoDB`
            - **Username:** `sa`
-           - **Password:** [from secret or paste: YourStrongPassw0rd!]
-           - **Tables:** `Customers`, `Products`, `Orders`
-           - **CDC Method:** `CHANGE_TRACKING`
+           - **Password:** [from secret]
+           - **Tables:** `dbo.Customers, dbo.Products, dbo.Orders`
         5. **Configure destination parameters:**
            - **Database:** `POC_CDC`
-           - **Schema:** `PUBLIC`
            - **Role:** Your Snowflake role
-           - **Warehouse:** `CDC_DEMO_WH` (or any warehouse)
+           - **Warehouse:** `CDC_DEMO_WH`
         6. **Upload JDBC Driver:**
-           - Download: `mssql-jdbc-12.6.1.jre11.jar` (or latest)
-           - Upload via Assets tab
+           - `mssql-jdbc-12.10.0.jre11.jar`
+           - Upload via Assets tab → parameter: `SQL Server JDBC Driver`
         7. **Verify configuration** (dry run)
-        8. **Enable processors** and **Start flow**
-        
-        #### Option B: Via nipyapi CLI
+        8. **Enable controllers**, then **Start flow**
+
+        #### Option B: Via nipyapi CLI (repeat per database)
         """)
-        
-        # Show nipyapi commands
-        st.code("""
-# 1. Deploy the connector
-nipyapi ci deploy_flow \\
+
+        code_block("""\
+# 1. Deploy connector (REPLACE for multi-db isolation)
+nipyapi --profile <profile> ci deploy_flow \\
   --registry_client ConnectorFlowRegistryClient \\
   --bucket connectors \\
-  --flow sqlserver-cdc
+  --flow sqlserver \\
+  --parameter_context_handling REPLACE
 
-# 2. Get process group ID
-PG_ID=$(nipyapi canvas list_all_process_groups | grep -i cdc)
+# 2. Get process group ID from deploy output
+PG_ID="<pg-id-from-output>"
 
-# 3. Configure source parameters
-nipyapi ci configure_inherited_params \\
+# 3. Configure from downloaded config file
+nipyapi --profile <profile> ci configure_inherited_params \\
   --process_group_id $PG_ID \\
-  --parameters '{
-    "jdbc-url": "jdbc:sqlserver://cdc-demo-service.<hash>.svc.spcs.internal:1433;databaseName=DemoDB",
-    "username": "sa",
-    "password": "YourStrongPassw0rd!",
-    "tables": "Customers,Products,Orders",
-    "cdc-method": "CHANGE_TRACKING"
-  }'
+  --parameters_file configs/DemoDB-params.json
 
-# 4. Configure destination (Snowflake)
-nipyapi ci configure_inherited_params \\
+# 4. Set password separately (sensitive)
+nipyapi --profile <profile> ci configure_inherited_params \\
   --process_group_id $PG_ID \\
-  --parameters '{
-    "snowflake-database": "POC_CDC",
-    "snowflake-schema": "PUBLIC",
-    "snowflake-role": "<YOUR_ROLE>",
-    "snowflake-warehouse": "CDC_DEMO_WH"
-  }'
+  --parameters '{"SQL Server Password": "<password>"}'
 
 # 5. Upload JDBC driver
-nipyapi ci upload_asset \\
-  --url https://repo1.maven.org/maven2/com/microsoft/sqlserver/mssql-jdbc/12.6.1/mssql-jdbc-12.6.1.jre11.jar \\
-  --context_id $PG_ID
+nipyapi --profile <profile> ci upload_asset \\
+  --url https://repo1.maven.org/maven2/com/microsoft/sqlserver/mssql-jdbc/12.10.0.jre11/mssql-jdbc-12.10.0.jre11.jar \\
+  --context_id <source-context-id> \\
+  --param_name "SQL Server JDBC Driver"
 
-# 6. Verify configuration
-nipyapi ci verify_config --verify_controllers=false
+# 6. Verify, enable, start
+nipyapi --profile <profile> ci verify_config --process_group_id $PG_ID --verify_processors false
+nipyapi --profile <profile> canvas schedule_all_controllers $PG_ID true
+nipyapi --profile <profile> ci verify_config --process_group_id $PG_ID --verify_controllers false
+nipyapi --profile <profile> ci start_flow --process_group_id $PG_ID""", "bash")
 
-# 7. Start flow
-nipyapi ci start_flow
-        """, language="bash")
-        
         st.markdown("""
         #### What happens after deployment:
         - SQL Server connector connects via internal DNS (no EAI needed)
-        - Polls Change Tracking tables every 30 seconds (configurable)
+        - Polls Change Tracking tables every ~30 seconds (configurable)
         - Captures all INSERT, UPDATE, DELETE operations
         - Streams data to Snowflake via PutSnowpipeStreaming
-        - Creates target tables: `POC_CDC.PUBLIC.Customers`, `Products`, `Orders`
+        - Creates target tables: `POC_CDC.DBO.CUSTOMERS`, `PRODUCTS`, `ORDERS`
         - **Latency:** < 30 seconds from SQL Server to Snowflake
-        
+
         #### Expected outcomes:
         - ✅ Openflow connector running (green status)
         - ✅ Data flowing to Snowflake (row counts increasing)
-        - ✅ Target tables populated in POC_CDC.PUBLIC
+        - ✅ One connector per database, each with isolated parameters
         """)
     
     # =====================================================================
@@ -205,32 +206,29 @@ nipyapi ci start_flow
         #### Query 1: Check row counts in Snowflake
         """)
         
-        st.code("""
+        code_block("""\
 SELECT COUNT(*) as OrderCount FROM POC_CDC.PUBLIC.ORDERS;
-SELECT COUNT(*) as CustomerCount FROM POC_CDC.PUBLIC.CUSTOMERS;
-        """, language="sql")
+SELECT COUNT(*) as CustomerCount FROM POC_CDC.PUBLIC.CUSTOMERS;""", "sql")
         
         st.markdown("""
         #### Query 2: Check recent orders synced
         """)
         
-        st.code("""
-SELECT TOP 10 ORDER_ID, CUSTOMER_ID, PRODUCT_ID, STATUS, ORDER_DATE 
-FROM POC_CDC.PUBLIC.ORDERS 
-ORDER BY ORDER_DATE DESC;
-        """, language="sql")
+        code_block("""\
+SELECT TOP 10 ORDER_ID, CUSTOMER_ID, PRODUCT_ID, STATUS, ORDER_DATE
+FROM POC_CDC.PUBLIC.ORDERS
+ORDER BY ORDER_DATE DESC;""", "sql")
         
         st.markdown("""
         #### Query 3: Monitor sync latency
         """)
         
-        st.code("""
+        code_block("""\
 -- SQL Server: Latest order date
 SELECT MAX(OrderDate) as MaxOrderDate FROM DemoDB.dbo.Orders;
 
 -- Snowflake: Latest synced order date (should be < 30 seconds behind)
-SELECT MAX(ORDER_DATE) as MaxSyncedDate FROM POC_CDC.PUBLIC.ORDERS;
-        """, language="sql")
+SELECT MAX(ORDER_DATE) as MaxSyncedDate FROM POC_CDC.PUBLIC.ORDERS;""", "sql")
         
         st.markdown("""
         #### SE talking points:
@@ -314,3 +312,7 @@ SELECT MAX(ORDER_DATE) as MaxSyncedDate FROM POC_CDC.PUBLIC.ORDERS;
     st.success(
         "🎉 **Demo Complete!** Questions? Check the README or chat with your Snowflake account team."
     )
+
+
+show(get_db_connection())
+footer()

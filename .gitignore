@@ -1,5 +1,8 @@
 # Environment variables
 .env
+.env.local
+.env.*.local
+*.env.local
 
 # Docker volumes (local testing)
 sqlserver_data/
@@ -26,6 +29,10 @@ wheels/
 .installed.cfg
 *.egg
 
+# Python virtual environments
+.venv/
+venv/
+
 # Streamlit
 .streamlit/secrets.toml
 
@@ -39,3 +46,24 @@ configs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Next.js build output
+.next/
+node_modules/
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Cortex Code artifacts
+.snowflake/
+.claude/
+
+# Temporary files
+z.md
+*.tmp
+
+# Internal docs (not needed for POC)
+docs/

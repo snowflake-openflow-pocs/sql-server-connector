@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  fastapi:
+    platform: linux/amd64
+    build: ./containers/fastapi
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  nextjs:
+    platform: linux/amd64
+    build: ./containers/nextjs
+    env_file:
+      - .env
+    environment:
+      - FASTAPI_URL=http://fastapi:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - fastapi
+    restart: unless-stopped

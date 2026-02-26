@@ -4,6 +4,6 @@ ENV ACCEPT_EULA=Y
 
 # Copy startup script and init script
 COPY startup.sh /startup.sh
-COPY init.sql /var/opt/mssql/init.sql
+COPY init.sql /opt/init.sql
 
 ENTRYPOINT ["/bin/bash", "/startup.sh"]
